@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dealt — Card Game Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF7F1;
+    --bg-deep:#F1EBDF;
+    --ink:#333B32;
+    --ink-soft:#8E9489;
+    --card-white:#FFFFFF;
+    --card-back-a:#5C8567;
+    --card-back-b:#7FA687;
+    --shadow: 0 3px 10px rgba(51,59,50,0.07);
+    --shadow-sm: 0 1px 4px rgba(51,59,50,0.06);
+
+    /* theme accent — swappable, default matches classic card red */
+    --accent:#D6455A;
+    --accent-soft:#FBE3E7;
+    --accent-deep:#B8283E;
+  }
+  [data-theme="red"]{ --accent:#D6455A; --accent-soft:#FBE3E7; --accent-deep:#B8283E; }
+  [data-theme="sage"]{ --accent:#8FB996; --accent-soft:#E7F0E4; --accent-deep:#5C8567; }
+  [data-theme="gold"]{ --accent:#D9B26A; --accent-soft:#F5EBD9; --accent-deep:#AD8642; }
+  [data-theme="lavender"]{ --accent:#C4A9CE; --accent-soft:#F0E6F2; --accent-deep:#95739F; }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:'Inter', sans-serif;
+    background: linear-gradient(180deg, var(--bg-deep), var(--bg) 220px);
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .phone{
+    position:relative;
+    width:390px;
+    max-width:100vw;
+    min-height:100vh;
+    background:var(--bg);
+    overflow:hidden;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.03), 0 30px 60px rgba(58,44,52,0.18);
+  }
+
+  h1,h2,h3{ font-family:'Comfortaa', sans-serif; margin:0; font-weight:600; }
+
+  /* ---------- SPLASH / SHUFFLE ---------- */
+  #splash{
+    position:absolute; inset:0;
+    background: radial-gradient(120% 100% at 50% 0%, var(--bg-deep), var(--bg) 60%);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50;
+    transition: opacity .5s ease;
+  }
+  #splash.hide{ opacity:0; pointer-events:none; }
+
+  .splash-title{
+    position:absolute;
+    top:96px; left:0; right:0;
+    text-align:center;
+    opacity:0;
+    transition: opacity .5s ease, transform .5s ease;
+    transform: translateY(6px);
+  }
+  .splash-title.show{ opacity:1; transform:translateY(0); }
+  .splash-title .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent-deep); font-weight:500;
+  }
+  .splash-title h1{ font-size:30px; color:var(--ink); margin-top:6px; }
+
+  .deck-stage{
+    position:relative;
+    width:100%; height:100%;
+  }
+  .shuffle-card{
+    position:absolute;
+    left:50%; top:50%;
+    width:92px; height:130px;
+    margin:-65px 0 0 -46px;
+    border-radius:14px;
+    background: linear-gradient(155deg, var(--card-back-b), var(--card-back-a));
+    box-shadow: var(--shadow);
+    display:flex; align-items:center; justify-content:center;
+    transition: transform .65s cubic-bezier(.2,.9,.25,1), opacity .4s ease .1s;
+    will-change: transform;
+  }
+  .shuffle-card::before{
+    content:'';
+    width:60%; height:74%;
+    border:2px solid rgba(255,255,255,0.35);
+    border-radius:8px;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 6px, transparent 6px 12px);
+  }
+  .shuffle-card .pip{
+    position:absolute; font-size:15px; opacity:.85;
+  }
+  .shuffle-card.landed{ box-shadow:none; }
+  .shuffle-card.fade-out{ opacity:0; }
+
+  @keyframes riffleL{
+    0%{ transform: translate(0,0) rotate(0deg); }
+    30%{ transform: translate(-24px,-4px) rotate(-7deg); }
+    60%{ transform: translate(-8px,3px) rotate(3deg); }
+    100%{ transform: translate(0,0) rotate(0deg); }
+  }
+  @keyframes riffleR{
+    0%{ transform: translate(0,0) rotate(0deg); }
+    30%{ transform: translate(24px,-3px) rotate(7deg); }
+    60%{ transform: translate(8px,4px) rotate(-3deg); }
+    100%{ transform: translate(0,0) rotate(0deg); }
+  }
+  .shuffling:nth-child(odd){ animation: riffleL 1.4s ease-in-out; }
+  .shuffling:nth-child(even){ animation: riffleR 1.4s ease-in-out; }
+
+  /* ---------- APP SHELL ---------- */
+  #app{ opacity:0; transition: opacity .5s ease; padding-bottom:40px; }
+  #app.show{ opacity:1; }
+
+  header.top{
+    padding:20px 22px 6px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  header.top .brand{ display:flex; align-items:center; gap:10px; }
+  header.top .brand .mark{
+    width:32px; height:32px; border-radius:50%;
+    background: var(--card-white);
+    border:1.5px solid var(--bg-deep);
+    display:flex; align-items:center; justify-content:center;
+  }
+  header.top h1{ font-size:19px; }
+
+  .dice-btn{
+    width:32px; height:32px; border-radius:50%;
+    background:var(--card-white);
+    border:1.5px solid var(--bg-deep);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; padding:0;
+    transition: border-color .15s ease;
+  }
+  .dice-btn:hover{ border-color:var(--accent); }
+  .dice-btn svg{ display:block; transform-origin:50% 50%; }
+  @keyframes diceRoll{
+    0%{ transform: rotate(0deg) scale(1); }
+    20%{ transform: rotate(95deg) scale(1.12); }
+    42%{ transform: rotate(205deg) scale(.94); }
+    64%{ transform: rotate(300deg) scale(1.08); }
+    82%{ transform: rotate(370deg) scale(.97); }
+    100%{ transform: rotate(360deg) scale(1); }
+  }
+  .dice-btn.rolling svg{ animation: diceRoll .65s cubic-bezier(.34,1.4,.4,1); }
+
+  .reroll-btn{
+    margin-top:6px; width:100%; padding:10px;
+    border-radius:8px; border:1.5px solid var(--bg-deep); background:none;
+    font-family:'JetBrains Mono', monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink); cursor:pointer; transition: border-color .15s ease, color .15s ease;
+  }
+  .reroll-btn:hover{ border-color:var(--accent); color:var(--accent-deep); }
+
+  .settings-section{ padding:4px 4px 10px; }
+  .settings-section h4{ font-family:'Comfortaa', sans-serif; font-size:14px; margin:0 0 4px; }
+  .settings-hint{ font-family:'Inter', sans-serif; font-size:12px; color:var(--ink-soft); margin:0 0 16px; line-height:1.5; }
+  .settings-swatches{ display:flex; gap:16px; }
+  .swatch-btn{ background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--ink-soft); cursor:pointer; padding:0; }
+  .swatch{
+    width:28px; height:28px; border-radius:50%;
+    border:2px solid white;
+    box-shadow: 0 0 0 1.5px rgba(51,59,50,0.15);
+  }
+  .swatch[data-t="red"]{ background:#D6455A; }
+  .swatch[data-t="sage"]{ background:#8FB996; }
+  .swatch[data-t="gold"]{ background:#D9B26A; }
+  .swatch[data-t="lavender"]{ background:#C4A9CE; }
+  .swatch.active{ box-shadow: 0 0 0 2px var(--ink); }
+
+  .intro-copy{ padding:2px 22px 18px; }
+  .intro-copy .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:11px;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--accent-deep); font-weight:500;
+  }
+  .intro-copy h2{ font-size:23px; line-height:1.25; margin-top:5px; }
+
+  /* ---------- 3x3 PLAYER GRID (real card faces) ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:12px;
+    padding:4px 22px 8px;
+  }
+  .pcard{
+    aspect-ratio: 3/4;
+    border-radius:10px;
+    background:var(--card-white);
+    box-shadow: none;
+    border:1.5px solid var(--bg-deep);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4px;
+    cursor:pointer;
+    transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    position:relative;
+    padding:6px 6px 20px;
+  }
+  .pcard:hover{ border-color:var(--accent); }
+  .pcard:active{ transform: scale(.97); }
+
+  .pcard .face{
+    font-family:'Comfortaa', sans-serif; font-weight:700;
+    font-size:22px; line-height:1;
+    display:flex; align-items:center; gap:2px;
+  }
+  .pcard.joker .face{ font-size:20px; }
+
+  .suit-black{ color:var(--ink); }
+  .suit-red{ color:var(--accent-deep); }
+
+  .pcard .caption{
+    position:absolute; left:0; right:0; bottom:6px; text-align:center;
+    font-family:'JetBrains Mono', monospace; font-size:8.5px; letter-spacing:.06em;
+    color:var(--ink-soft); text-transform:uppercase;
+  }
+
+  /* ---------- GAME LIST SHEET ---------- */
+  #sheet{
+    position:fixed; inset:0; margin:0 auto; width:390px; max-width:100vw;
+    display:flex; align-items:flex-end;
+    z-index:60;
+    pointer-events:none;
+  }
+  #sheet .backdrop{
+    position:absolute; inset:0; background:rgba(58,44,52,0.32);
+    opacity:0; transition:opacity .3s ease;
+  }
+  #sheet .panel{
+    position:relative;
+    width:100%; max-height:82vh;
+    background:var(--bg);
+    border-radius:22px 22px 0 0;
+    box-shadow: 0 -10px 30px rgba(58,44,52,0.2);
+    transform: translateY(100%);
+    transition: transform .38s cubic-bezier(.2,.9,.25,1);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+  #sheet.open{ pointer-events:auto; }
+  #sheet.open .backdrop{ opacity:1; }
+  #sheet.open .panel{ transform: translateY(0); }
+
+  .panel-handle{ width:36px; height:4px; background:rgba(58,44,52,0.18); border-radius:99px; margin:10px auto 4px; }
+  .panel-head{ padding:8px 22px 14px; display:flex; align-items:center; justify-content:space-between; }
+  .panel-head h3{ font-size:20px; }
+  .panel-head .count-tag{
+    font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:500;
+    background: var(--accent-soft); color:var(--accent-deep);
+    padding:4px 9px; border-radius:99px;
+  }
+  .close-btn{
+    width:30px; height:30px; border-radius:50%; border:none;
+    background: rgba(58,44,52,0.06); color:var(--ink);
+    font-size:16px; cursor:pointer;
+  }
+
+  .game-list{ overflow-y:auto; padding:0 16px 24px; display:flex; flex-direction:column; gap:10px; }
+  .game-row{
+    display:flex; align-items:center; gap:12px;
+    background:var(--card-white);
+    border-radius:14px;
+    padding:11px 12px;
+    box-shadow: var(--shadow-sm);
+    cursor:pointer;
+    transition: box-shadow .15s ease;
+  }
+  .game-row:hover{ box-shadow: 0 2px 8px rgba(51,59,50,0.12); }
+  .game-row .thumb{
+    width:42px; height:56px; border-radius:8px;
+    background: linear-gradient(155deg, var(--accent-soft), white);
+    border:1px solid var(--accent-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-size:19px; flex-shrink:0;
+  }
+  .game-row .meta{ flex:1; min-width:0; }
+  .game-row .meta h4{ font-family:'Comfortaa', sans-serif; font-size:14px; font-weight:600; margin:0 0 2px; }
+  .game-row .meta p{ font-family:'Inter', sans-serif; font-size:11.5px; color:var(--ink-soft); margin:0; }
+
+  .fav-btn{
+    background:none; border:none; cursor:pointer;
+    width:34px; height:34px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .fav-btn svg{ width:22px; height:22px; transition: transform .25s cubic-bezier(.4,2,.6,1); }
+  .fav-btn.pop svg{ transform: scale(1.12); }
+  .fav-card-outline{ fill:none; stroke:var(--ink-soft); stroke-width:1.6; }
+  .fav-heart{ fill:none; stroke:var(--ink-soft); stroke-width:1.6; }
+  .fav-btn.active .fav-card-outline{ stroke:var(--accent); }
+  .fav-btn.active .fav-heart{ fill:var(--accent); stroke:var(--accent); }
+
+  /* ---------- GAME DETAIL VIEW ---------- */
+  .back-link{
+    background:none; border:none; cursor:pointer;
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.04em;
+    color:var(--ink-soft); padding:0 0 14px; display:block;
+  }
+  .back-link:hover{ color:var(--accent-deep); }
+  .detail-art{ display:flex; justify-content:center; padding:6px 0 18px; }
+  .face-card{
+    width:118px; padding:16px 10px 12px;
+    border-radius:12px; border:1.5px solid var(--bg-deep);
+    background:var(--card-white);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .face-icon{ display:flex; align-items:center; justify-content:center; height:40px; }
+  .face-label{
+    font-family:'Comfortaa', sans-serif; font-weight:700; font-size:11px;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft);
+  }
+  .detail-how{
+    font-family:'Inter', sans-serif; font-size:13.5px; line-height:1.6;
+    color:var(--ink); text-align:center; margin:0 0 20px; padding:0 6px;
+  }
+  .detail-fav{ display:block; margin:0 auto; width:44px; height:44px; }
+  .detail-fav svg{ width:28px; height:28px; }
+  .detail-fav-label{
+    text-align:center; font-family:'JetBrains Mono', monospace; font-size:10px;
+    letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-top:4px;
+  }
+
+  .empty-note{
+    text-align:center; color:var(--ink-soft); font-size:13px; padding:30px 10px;
+  }
+
+  footer.tabbar{
+    position:sticky; bottom:0;
+    display:flex; justify-content:space-around;
+    padding:12px 10px 16px;
+    background: linear-gradient(180deg, transparent, var(--bg) 30%);
+  }
+  .tab{
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:.04em;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  .tab.active{ color:var(--accent-deep); }
+  .tab .tab-icon{ font-size:16px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- SPLASH / SHUFFLE INTRO -->
+  <div id="splash">
+    <div class="deck-stage" id="deckStage"></div>
+    <div class="splash-title" id="splashTitle">
+      <div class="eyebrow">shuffling the deck</div>
+      <h1>Dealt</h1>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app" data-theme="red">
+    <header class="top">
+      <div class="brand">
+        <div class="mark">
+          <svg viewBox="0 0 24 24" width="19" height="19">
+            <rect x="4.5" y="6.5" width="11" height="15" rx="2.2" transform="rotate(-13 10 14)" fill="var(--card-white)" stroke="var(--ink-soft)" stroke-width="1.4"/>
+            <rect x="8.5" y="4.5" width="11" height="15" rx="2.2" fill="var(--card-white)" stroke="var(--accent-deep)" stroke-width="1.4"/>
+            <text x="10.5" y="10.5" font-family="Comfortaa, sans-serif" font-size="5.5" font-weight="700" fill="var(--accent-deep)">♦</text>
+          </svg>
+        </div>
+        <h1>Dealt</h1>
+      </div>
+      <button class="dice-btn" id="diceBtn" aria-label="Roll for a random game">
+        <svg viewBox="0 0 24 24" width="17" height="17">
+          <rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+          <circle cx="8.5" cy="8.5" r="1.3" fill="var(--accent-deep)"/>
+          <circle cx="12" cy="12" r="1.3" fill="var(--accent-deep)"/>
+          <circle cx="15.5" cy="15.5" r="1.3" fill="var(--accent-deep)"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="intro-copy">
+      <div class="eyebrow">deal me in</div>
+      <h2>How many are<br>at the table?</h2>
+    </div>
+
+    <div class="grid" id="playerGrid"></div>
+
+    <footer class="tabbar">
+      <div class="tab active"><span class="tab-icon">🂡</span>Play</div>
+      <div class="tab" id="favTab"><span class="tab-icon">♥︎</span>Favorites</div>
+      <div class="tab" id="settingsTab"><span class="tab-icon">⚙︎</span>Settings</div>
+    </footer>
+  </div>
+
+  <!-- GAME LIST SHEET -->
+  <div id="sheet">
+    <div class="backdrop" id="sheetBackdrop"></div>
+    <div class="panel">
+      <div class="panel-handle"></div>
+      <div class="panel-head">
+        <h3 id="sheetTitle">Games</h3>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="count-tag" id="sheetTag">2 players</span>
+          <button class="close-btn" id="sheetClose">✕</button>
+        </div>
+      </div>
+      <div class="game-list" id="gameList"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ---------- DATA ----------
+  const playerSlots = [
+    { n:1, label:'Solo',  key:'1', rank:'A', suit:'♠', color:'black' },
+    { n:2, label:'Duo',   key:'2', rank:'2', suit:'♥', color:'red' },
+    { n:3, label:'Trio',  key:'3', rank:'3', suit:'♦', color:'red' },
+    { n:4, label:'Squad', key:'4', rank:'4', suit:'♣', color:'black' },
+    { n:5, label:'Five',  key:'5', rank:'5', suit:'♠', color:'black' },
+    { n:6, label:'Six',   key:'6', rank:'6', suit:'♥', color:'red' },
+    { n:7, label:'Seven', key:'7', rank:'7', suit:'♦', color:'red' },
+    { n:8, label:'Eight', key:'8', rank:'8', suit:'♣', color:'black' },
+    { n:9, label:'Party', key:'9', party:true },
+  ];
+
+  const games = {
+    1: [
+      { name:'Klondike Solitaire', sub:'Classic • ~10 min', icon:'🂮' },
+      { name:'Golf', sub:'Casual • ~10 min', icon:'🂭' },
+      { name:'FreeCell', sub:'Strategy • ~15 min', icon:'🂫' },
+      { name:'Pyramid', sub:'Quick • ~8 min', icon:'🃍' },
+    ],
+    2: [
+      { name:'War', sub:'Easy • ~15 min', icon:'🂱' },
+      { name:'Gin Rummy', sub:'Strategy • ~20 min', icon:'🂽' },
+      { name:'Egyptian Ratscrew', sub:'Fast-paced • ~10 min', icon:'🃁' },
+      { name:'Speed', sub:'Fast-paced • ~5 min', icon:'🃑' },
+    ],
+    3: [
+      { name:'Three-Hand Whist', sub:'Trick-taking • ~25 min', icon:'🂾' },
+      { name:'Spoons', sub:'Party • ~10 min', icon:'🃎' },
+      { name:'Kemps', sub:'Team signals • ~15 min', icon:'🂪' },
+    ],
+    4: [
+      { name:'Hearts', sub:'Trick-taking • ~30 min', icon:'🂷' },
+      { name:'Spades', sub:'Partnership • ~30 min', icon:'🂫' },
+      { name:'Euchre', sub:'Trick-taking • ~25 min', icon:'🃋' },
+      { name:'Canasta', sub:'Rummy-style • ~45 min', icon:'🃝' },
+    ],
+    5: [
+      { name:'Texas Hold\'em', sub:'Poker • ~40 min', icon:'🂡' },
+      { name:'Kings in the Corner', sub:'Solitaire-style • ~20 min', icon:'🂲' },
+      { name:'Golf (Group)', sub:'Casual • ~20 min', icon:'🂭' },
+    ],
+    6: [
+      { name:'Rummy 500', sub:'Rummy-style • ~35 min', icon:'🃝' },
+      { name:'Oh Hell', sub:'Trick-taking • ~30 min', icon:'🂶' },
+      { name:'Bullshit (Cheat)', sub:'Bluffing • ~20 min', icon:'🂨' },
+    ],
+    7: [
+      { name:'President', sub:'Climbing • ~20 min', icon:'🃊' },
+      { name:'Mafia', sub:'Social deduction • ~30 min', icon:'🂻' },
+      { name:'Big Two', sub:'Climbing • ~20 min', icon:'🃂' },
+    ],
+    8: [
+      { name:'President (Large)', sub:'Climbing • ~25 min', icon:'🃊' },
+      { name:'Werewolf', sub:'Social deduction • ~30 min', icon:'🂸' },
+      { name:'Go Fish (Team)', sub:'Casual • ~15 min', icon:'🃕' },
+    ],
+    9: [
+      { name:'Mafia', sub:'Social deduction • 30+ min', icon:'🂻' },
+      { name:'President', sub:'Climbing • ~25 min', icon:'🃊' },
+      { name:'Bullshit (Cheat)', sub:'Bluffing • ~20 min', icon:'🂨' },
+      { name:'Werewolf', sub:'Social deduction • 30+ min', icon:'🂸' },
+    ],
+  };
+
+  const favorites = new Set();
+
+  // ---------- BUILD PLAYER GRID ----------
+  const gridEl = document.getElementById('playerGrid');
+  playerSlots.forEach(slot => {
+    const card = document.createElement('div');
+
+    if (slot.party) {
+      card.className = 'pcard joker';
+      card.innerHTML = `
+        <div class="face suit-red">★</div>
+        <div class="caption">${slot.label} · 9+p</div>
+      `;
+      card.addEventListener('click', () => openSheet(slot));
+      gridEl.appendChild(card);
+      return;
+    }
+
+    const colorClass = slot.color === 'red' ? 'suit-red' : 'suit-black';
+    card.className = 'pcard';
+    card.innerHTML = `
+      <div class="face ${colorClass}"><span>${slot.rank}</span><span>${slot.suit}</span></div>
+      <div class="caption">${slot.label} · ${slot.n}p</div>
+    `;
+    card.addEventListener('click', () => openSheet(slot));
+    gridEl.appendChild(card);
+  });
+
+  // ---------- GAME SHEET ----------
+  const sheet = document.getElementById('sheet');
+  const sheetBackdrop = document.getElementById('sheetBackdrop');
+  const sheetTitle = document.getElementById('sheetTitle');
+  const sheetTag = document.getElementById('sheetTag');
+  const gameList = document.getElementById('gameList');
+
+  function favIconSVG(){
+    return `<svg viewBox="0 0 24 24"><path class="fav-heart" d="M12 18c-4-2.5-6.6-5.1-6.6-8.1 0-2.1 1.7-3.6 3.6-3.6 1.3 0 2.4.7 3 1.9.6-1.2 1.7-1.9 3-1.9 1.9 0 3.6 1.5 3.6 3.6 0 3-2.6 5.6-6.6 8.1z"/></svg>`;
+  }
+
+  let returnToList = null;
+
+  function openSheet(slot){
+    sheetTitle.textContent = slot.party ? 'Games for a party' : `Games for ${slot.label.toLowerCase()}`;
+    sheetTag.textContent = slot.party ? '9+ players' : `${slot.n} player${slot.n>1?'s':''}`;
+    gameList.innerHTML = '';
+    (games[slot.key] || []).forEach(g => {
+      const id = slot.key + '|' + g.name;
+      const row = document.createElement('div');
+      row.className = 'game-row';
+      row.dataset.key = slot.key;
+      row.dataset.name = g.name;
+      row.innerHTML = `
+        <div class="thumb">${g.icon}</div>
+        <div class="meta"><h4>${g.name}</h4><p>${g.sub}</p></div>
+        <button class="fav-btn ${favorites.has(id)?'active':''}" data-id="${id}">${favIconSVG()}</button>
+      `;
+      gameList.appendChild(row);
+    });
+    sheet.classList.add('open');
+    returnToList = () => openSheet(slot);
+  }
+  function closeSheet(){ sheet.classList.remove('open'); }
+  document.getElementById('sheetClose').addEventListener('click', closeSheet);
+  sheetBackdrop.addEventListener('click', closeSheet);
+
+  const app = document.getElementById('app');
+
+  gameList.addEventListener('click', (e) => {
+    const backBtn = e.target.closest('#backToList');
+    if (backBtn) { if (returnToList) returnToList(); return; }
+    const reroll = e.target.closest('#rerollBtn');
+    if (reroll) { showRandomPick(); return; }
+    const swBtn = e.target.closest('.swatch-btn');
+    if (swBtn) {
+      app.setAttribute('data-theme', swBtn.dataset.t);
+      gameList.querySelectorAll('.swatch').forEach(s => {
+        s.classList.toggle('active', s.dataset.t === swBtn.dataset.t);
+      });
+      return;
+    }
+    const btn = e.target.closest('.fav-btn');
+    if (btn) {
+      const id = btn.dataset.id;
+      if(favorites.has(id)){ favorites.delete(id); btn.classList.remove('active'); }
+      else { favorites.add(id); btn.classList.add('active'); }
+      btn.classList.add('pop');
+      setTimeout(()=>btn.classList.remove('pop'), 250);
+      return;
+    }
+    const row = e.target.closest('.game-row');
+    if (row && row.dataset.name) {
+      openGameDetail(row.dataset.key, row.dataset.name);
+    }
+  });
+
+  // ---------- FAVORITES TAB ----------
+  document.getElementById('favTab').addEventListener('click', renderFavorites);
+  function renderFavorites(){
+    sheetTitle.textContent = 'Your favorites';
+    sheetTag.textContent = favorites.size + ' saved';
+    gameList.innerHTML = '';
+    if(favorites.size === 0){
+      gameList.innerHTML = '<div class="empty-note">No favorites yet — tap the heart on any game to save it here.</div>';
+    } else {
+      favorites.forEach(id => {
+        const [key, name] = id.split('|');
+        const g = (games[key]||[]).find(x => x.name === name);
+        if(!g) return;
+        const row = document.createElement('div');
+        row.className = 'game-row';
+        row.dataset.key = key;
+        row.dataset.name = g.name;
+        row.innerHTML = `
+          <div class="thumb">${g.icon}</div>
+          <div class="meta"><h4>${g.name}</h4><p>${g.sub}</p></div>
+          <button class="fav-btn active" data-id="${id}">${favIconSVG()}</button>
+        `;
+        gameList.appendChild(row);
+      });
+    }
+    sheet.classList.add('open');
+    returnToList = renderFavorites;
+  }
+
+  // ---------- SETTINGS TAB (theme picker lives here now) ----------
+  const themeOptions = [
+    { t:'red', label:'Red' },
+    { t:'sage', label:'Sage' },
+    { t:'gold', label:'Gold' },
+    { t:'lavender', label:'Lavender' },
+  ];
+  document.getElementById('settingsTab').addEventListener('click', () => {
+    sheetTitle.textContent = 'Settings';
+    sheetTag.textContent = 'CUSTOMIZE';
+    const current = app.getAttribute('data-theme');
+    gameList.innerHTML = `
+      <div class="settings-section">
+        <h4>Accent color</h4>
+        <p class="settings-hint">Sets the color used for red suits, tags, and highlights across the app.</p>
+        <div class="settings-swatches">
+          ${themeOptions.map(o => `
+            <button class="swatch-btn" data-t="${o.t}">
+              <span class="swatch ${o.t === current ? 'active' : ''}" data-t="${o.t}"></span>
+              ${o.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    sheet.classList.add('open');
+  });
+
+  // ---------- GAME DETAIL (with face-card art) ----------
+  const HOW_TO = {
+    'Klondike Solitaire': 'Build descending, alternating-color runs in the tableau, and stack each suit up to King in the foundations.',
+    'Golf': 'Arrange your dealt cards face down, flip and swap to build the lowest-scoring hand — like real golf, low score wins.',
+    'FreeCell': 'All cards deal face up. Use four free cells to shuffle cards into ordered foundation piles.',
+    'Pyramid': 'Clear the pyramid by pairing exposed cards that add up to 13.',
+    'War': 'Flip a card each — highest card wins the round and takes both cards.',
+    'Gin Rummy': 'Draw and discard to build sets and runs, then knock when your unmatched cards score low enough.',
+    'Egyptian Ratscrew': 'Slap the pile when doubles or a sandwich pattern appears — fastest hand takes the cards.',
+    'Speed': 'Race your opponent to empty your hand by playing cards one rank up or down, simultaneously.',
+    'Three-Hand Whist': 'Bid on tricks and follow suit — most tricks taken wins the hand.',
+    'Spoons': 'Collect four of a kind, then grab a spoon from the table — last to grab one is out.',
+    'Kemps': 'Signal your partner secretly when your hand has four of a kind, without the other team catching on.',
+    'Hearts': 'Avoid taking hearts and the queen of spades — lowest score after several hands wins.',
+    'Spades': 'Bid how many tricks your partnership will take, then work together to hit the number exactly.',
+    'Euchre': 'Partners battle to win 3 of 5 tricks each hand, using a trump suit chosen from the top card.',
+    'Canasta': 'Build melds of seven or more cards, including wild cards, to score big "canastas."',
+    "Texas Hold'em": 'Two hole cards plus five shared community cards — the best five-card hand wins the pot.',
+    'Kings in the Corner': 'Play cards in descending, alternating colors onto four corner piles — empty your hand first to win.',
+    'Golf (Group)': 'Same as Golf, played head-to-head — lowest total score across several holes wins.',
+    'Rummy 500': 'Meld sets and runs for points, and grab from the discard pile to build bigger combinations.',
+    'Oh Hell': 'Bid the exact number of tricks you\'ll take each round — precision beats greed.',
+    'Bullshit (Cheat)': 'Play cards face down claiming a rank — call "bullshit" if you think someone\'s lying.',
+    'President': 'Get rid of your cards first by playing higher combinations — finish last and you\'re the Scum.',
+    'Mafia': 'The Mafia secretly eliminate townsfolk at night; everyone else debates and votes by day to find them.',
+    'Big Two': 'Play the lowest legal combination each turn — first to empty your hand wins.',
+    'President (Large)': 'The classic climbing game, scaled up — play higher combinations to shed your hand first.',
+    'Werewolf': 'Werewolves secretly hunt at night while villagers debate and vote out suspects by day.',
+    'Go Fish (Team)': 'Ask opponents for a rank to complete sets — the team with the most sets wins.',
+  };
+
+  function pickCharacter(name, sub){
+    const t = (name + ' ' + sub).toLowerCase();
+    if (t.includes('trick') || t.includes('bid') || t.includes('partnership')) return 'king';
+    if (t.includes('rummy') || t.includes('meld') || t.includes('canasta') || t.includes('solitaire') || t.includes('casual')) return 'queen';
+    if (t.includes('fast') || t.includes('bluff') || t.includes('climbing') || t.includes('quick') || t.includes('easy')) return 'jack';
+    if (t.includes('social') || t.includes('party') || t.includes('poker')) return 'joker';
+    return ['king','queen','jack','joker'][name.length % 4];
+  }
+
+  const CHAR_SVG = {
+    king: `<svg viewBox="0 0 94 60" width="58" height="37">
+      <path d="M10 46 L18 20 L32 38 L47 12 L62 38 L76 20 L84 46 Z" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <rect x="10" y="46" width="74" height="10" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="18" cy="20" r="2.4" fill="var(--accent-deep)"/>
+      <circle cx="47" cy="12" r="2.6" fill="var(--accent-deep)"/>
+      <circle cx="76" cy="20" r="2.4" fill="var(--accent-deep)"/>
+    </svg>`,
+    queen: `<svg viewBox="0 0 94 60" width="58" height="37">
+      <path d="M12 44 Q24 14 47 30 Q70 14 82 44 Z" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <rect x="12" y="44" width="70" height="9" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/>
+      <path d="M43 18 Q47 12 51 18 Q47 23 43 18 Z" fill="var(--accent-deep)" stroke="none"/>
+    </svg>`,
+    jack: `<svg viewBox="0 0 94 60" width="58" height="37">
+      <path d="M14 42 Q14 18 47 16 Q80 18 80 42 Z" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <rect x="10" y="42" width="74" height="9" rx="4" fill="none" stroke="var(--ink)" stroke-width="2"/>
+      <path d="M62 20 L75 7" stroke="var(--accent-deep)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M71 7 L75 7 L75 11" fill="none" stroke="var(--accent-deep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+    joker: `<svg viewBox="0 0 94 60" width="58" height="37">
+      <path d="M12 46 Q12 30 24 30 Q22 14 34 20 Q34 6 47 16 Q60 6 60 20 Q72 14 70 30 Q82 30 82 46 Z" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <rect x="12" y="46" width="70" height="8" rx="3" fill="none" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="24" cy="30" r="2.4" fill="var(--accent-deep)"/>
+      <circle cx="47" cy="16" r="2.6" fill="var(--accent-deep)"/>
+      <circle cx="70" cy="30" r="2.4" fill="var(--accent-deep)"/>
+    </svg>`,
+  };
+
+  function openGameDetail(key, name){
+    const g = (games[key] || []).find(x => x.name === name);
+    if (!g) return;
+    const slot = playerSlots.find(s => s.key === key);
+    const character = pickCharacter(g.name, g.sub);
+    const id = key + '|' + g.name;
+    sheetTitle.textContent = g.name;
+    sheetTag.textContent = slot ? (slot.party ? '9+ players' : `${slot.n} player${slot.n>1?'s':''}`) : g.sub;
+    gameList.innerHTML = `
+      <button class="back-link" id="backToList">← Back</button>
+      <div class="detail-art">
+        <div class="face-card">
+          <div class="face-icon">${CHAR_SVG[character]}</div>
+          <div class="face-label">${character}</div>
+        </div>
+      </div>
+      <p class="detail-how">${HOW_TO[g.name] || g.sub}</p>
+      <button class="fav-btn detail-fav ${favorites.has(id)?'active':''}" data-id="${id}">${favIconSVG()}</button>
+      <div class="detail-fav-label">Tap to save to favorites</div>
+    `;
+  }
+
+  // ---------- DICE ROLL / RANDOM PICK ----------
+  function pickRandomGame(){
+    const pool = [];
+    playerSlots.forEach(slot => {
+      (games[slot.key] || []).forEach(g => pool.push({ ...g, slot }));
+    });
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function showRandomPick(){
+    const pick = pickRandomGame();
+    const id = pick.slot.key + '|' + pick.name;
+    sheetTitle.textContent = 'Random pick';
+    sheetTag.textContent = pick.slot.party ? '9+ players' : `${pick.slot.n} player${pick.slot.n>1?'s':''}`;
+    gameList.innerHTML = `
+      <div class="game-row" data-key="${pick.slot.key}" data-name="${pick.name}">
+        <div class="thumb">${pick.icon}</div>
+        <div class="meta"><h4>${pick.name}</h4><p>${pick.sub}</p></div>
+        <button class="fav-btn ${favorites.has(id)?'active':''}" data-id="${id}">${favIconSVG()}</button>
+      </div>
+      <button class="reroll-btn" id="rerollBtn">Roll again</button>
+    `;
+    sheet.classList.add('open');
+    returnToList = showRandomPick;
+  }
+
+  const diceBtn = document.getElementById('diceBtn');
+  diceBtn.addEventListener('click', () => {
+    if (diceBtn.classList.contains('rolling')) return;
+    diceBtn.classList.add('rolling');
+    setTimeout(() => {
+      diceBtn.classList.remove('rolling');
+      showRandomPick();
+    }, 650);
+  });
+
+  // ---------- SHUFFLE INTRO ----------
+  const deckStage = document.getElementById('deckStage');
+  const splash = document.getElementById('splash');
+  const splashTitle = document.getElementById('splashTitle');
+  const cards = [];
+  for(let i=0;i<9;i++){
+    const c = document.createElement('div');
+    c.className = 'shuffle-card';
+    c.style.zIndex = 9-i;
+    deckStage.appendChild(c);
+    cards.push(c);
+  }
+
+  requestAnimationFrame(() => {
+    splashTitle.classList.add('show');
+    cards.forEach(c => c.classList.add('shuffling'));
+  });
+
+  setTimeout(() => {
+    // shuffle finished — fly cards to their grid slots
+    cards.forEach(c => c.classList.remove('shuffling'));
+    const targets = document.querySelectorAll('.pcard');
+    cards.forEach((c, i) => {
+      const t = targets[i];
+      if(!t) return;
+      const tRect = t.getBoundingClientRect();
+      const cRect = c.getBoundingClientRect();
+      const dx = (tRect.left + tRect.width/2) - (cRect.left + cRect.width/2);
+      const dy = (tRect.top + tRect.height/2) - (cRect.top + cRect.height/2);
+      const scaleX = tRect.width / cRect.width;
+      const scaleY = tRect.height / cRect.height;
+      c.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
+      c.classList.add('landed');
+    });
+  }, 1500);
+
+  setTimeout(() => {
+    cards.forEach(c => c.classList.add('fade-out'));
+    app.classList.add('show');
+  }, 2150);
+
+  setTimeout(() => {
+    splash.classList.add('hide');
+  }, 2350);
+
+  setTimeout(() => {
+    splash.remove();
+  }, 2900);
+</script>
+
+</body>
+</html>

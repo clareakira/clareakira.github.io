@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How-To-Play Vision — Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF7F1;
+    --bg-deep:#F1EBDF;
+    --ink:#333B32;
+    --ink-soft:#8E9489;
+    --card-white:#FFFFFF;
+    --accent:#D6455A;
+    --accent-soft:#FBE3E7;
+    --accent-deep:#B8283E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:'Inter', sans-serif;
+    background: linear-gradient(180deg, var(--bg-deep), var(--bg) 220px);
+    color:var(--ink);
+    display:flex; justify-content:center;
+    min-height:100vh;
+  }
+  .phone{
+    width:390px; max-width:100vw; min-height:100vh;
+    background:var(--bg);
+    box-shadow: 0 30px 60px rgba(51,59,50,0.18);
+    padding:24px 22px 40px;
+  }
+  h1,h2{ font-family:'Comfortaa', sans-serif; margin:0; }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--accent-deep);
+  }
+  h1{ font-size:20px; margin-top:6px; }
+  .note{ font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin-top:8px; }
+  hr{ border:none; border-top:1px dashed var(--bg-deep); margin:22px 0; }
+
+  .game-header{ text-align:center; padding:6px 0 4px; }
+  .game-header .eyebrow{ display:block; }
+  .game-title{
+    font-family:'Comfortaa', sans-serif; font-weight:700; font-size:38px;
+    color:var(--ink); margin:8px 0 10px; letter-spacing:-.01em;
+  }
+  .title-rule{
+    width:30px; height:3px; border-radius:2px; background:var(--accent);
+    margin:0 auto 10px;
+  }
+  .game-header .tag{
+    display:inline-block; font-family:'JetBrains Mono', monospace; font-size:10.5px;
+    background:var(--accent-soft); color:var(--accent-deep);
+    padding:3px 10px; border-radius:999px;
+  }
+
+  /* ---------- animated rule demo ---------- */
+  .table{
+    margin-top:22px; padding:22px 14px 18px; border-radius:16px;
+    background:var(--card-white); border:1.5px solid var(--bg-deep);
+  }
+  .players{ display:flex; justify-content:space-between; align-items:flex-end; }
+  .player{ display:flex; flex-direction:column; align-items:center; gap:8px; width:44%; }
+  .player-label{
+    font-family:'JetBrains Mono', monospace; font-size:10px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--ink-soft);
+  }
+
+  .flip-card{ width:64px; aspect-ratio:5/7; perspective:400px; transition:transform .55s cubic-bezier(.3,1.4,.4,1), opacity .4s ease; }
+  .flip-inner{ position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform .5s cubic-bezier(.3,1.4,.4,1); }
+  .flip-card.flipped .flip-inner{ transform:rotateY(180deg); }
+  .flip-face{
+    position:absolute; inset:0; backface-visibility:hidden; border-radius:7px;
+    border:1.5px solid var(--bg-deep); display:flex; align-items:center; justify-content:center;
+    background:var(--card-white);
+  }
+  .flip-back{
+    background: repeating-linear-gradient(45deg, var(--accent-soft) 0 5px, var(--card-white) 5px 10px);
+  }
+  .flip-front{
+    transform:rotateY(180deg);
+    font-family:'Comfortaa', sans-serif; font-weight:700; font-size:19px; gap:2px;
+    display:flex; align-items:center;
+  }
+  .suit-red{ color:var(--accent-deep); }
+  .suit-black{ color:var(--ink); }
+
+  .flip-card.winner{ box-shadow:0 0 0 2.5px var(--accent); }
+  .flip-card.loser{ opacity:.5; }
+
+  .pile{ display:flex; align-items:center; gap:6px; }
+  .pile-icon{
+    width:20px; height:26px; border-radius:3px;
+    border:1.5px solid var(--ink-soft); background:var(--bg-deep);
+  }
+  .pile-count{ font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--ink-soft); }
+
+  .caption{
+    margin-top:20px; text-align:center; min-height:34px;
+    font-family:'Inter', sans-serif; font-size:13px; color:var(--ink);
+    display:flex; align-items:center; justify-content:center; padding:0 6px;
+  }
+
+  .controls{ display:flex; justify-content:center; gap:10px; margin-top:14px; }
+  .ctrl-btn{
+    font-family:'JetBrains Mono', monospace; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase;
+    padding:8px 14px; border-radius:999px; border:1.5px solid var(--bg-deep);
+    background:none; color:var(--ink); cursor:pointer;
+  }
+  .ctrl-btn:hover{ border-color:var(--accent); color:var(--accent-deep); }
+
+  .footnote{
+    margin-top:16px; font-size:11.5px; color:var(--ink-soft); line-height:1.5;
+    text-align:center; padding:0 8px;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="eyebrow">concept preview</div>
+  <h1>Cards that teach the rules</h1>
+  <p class="note">No card illustration at all now — just the game name, given real weight, with a small accent mark and player-count tag. All the visual interest lives in the moving demo below.</p>
+
+  <hr>
+
+  <div class="game-header">
+    <span class="eyebrow">how to play</span>
+    <h1 class="game-title">War</h1>
+    <div class="title-rule"></div>
+    <div class="tag">2 players</div>
+  </div>
+
+  <div class="table">
+    <div class="players">
+      <div class="player">
+        <div class="player-label">You</div>
+        <div class="flip-card" id="cardA">
+          <div class="flip-inner">
+            <div class="flip-face flip-back"></div>
+            <div class="flip-face flip-front" id="faceA"></div>
+          </div>
+        </div>
+        <div class="pile"><div class="pile-icon"></div><span class="pile-count" id="pileA">0</span></div>
+      </div>
+      <div class="player">
+        <div class="player-label">Rival</div>
+        <div class="flip-card" id="cardB">
+          <div class="flip-inner">
+            <div class="flip-face flip-back"></div>
+            <div class="flip-face flip-front" id="faceB"></div>
+          </div>
+        </div>
+        <div class="pile"><div class="pile-icon"></div><span class="pile-count" id="pileB">0</span></div>
+      </div>
+    </div>
+    <div class="caption" id="caption">Tap play to see how War works.</div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="playBtn">▶ Play</button>
+    <button class="ctrl-btn" id="pauseBtn">⏸ Pause</button>
+  </div>
+
+  <p class="footnote">On a tie, both players place three cards face-down and flip a fourth — highest of those wins everything on the table. (Not animated in this preview.)</p>
+</div>
+
+<script>
+  // ---------- moving-cards rule demo ----------
+  const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const SUITS = [
+    { s:'♠', color:'suit-black' }, { s:'♣', color:'suit-black' },
+    { s:'♥', color:'suit-red' },  { s:'♦', color:'suit-red' },
+  ];
+
+  const cardA = document.getElementById('cardA');
+  const cardB = document.getElementById('cardB');
+  const faceA = document.getElementById('faceA');
+  const faceB = document.getElementById('faceB');
+  const pileA = document.getElementById('pileA');
+  const pileB = document.getElementById('pileB');
+  const caption = document.getElementById('caption');
+
+  let playing = false;
+  let loopToken = 0;
+
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+  function randomCard(){
+    const suit = SUITS[Math.floor(Math.random()*SUITS.length)];
+    const rankIdx = Math.floor(Math.random()*RANKS.length);
+    return { rank: RANKS[rankIdx], rankIdx, ...suit };
+  }
+  function setCaption(t){ caption.textContent = t; }
+  function setFace(el, card){ el.innerHTML = `<span>${card.rank}</span><span>${card.s}</span>`; el.className = 'flip-face flip-front ' + card.color; }
+
+  async function playRound(myToken){
+    let a = randomCard(), b = randomCard();
+    while (b.rankIdx === a.rankIdx) b = randomCard(); // skip ties for this preview
+
+    setFace(faceA, a); setFace(faceB, b);
+    cardA.className = 'flip-card'; cardB.className = 'flip-card';
+    setCaption('Each player flips their top card.');
+    await sleep(500); if (myToken !== loopToken) return;
+
+    cardA.classList.add('flipped'); cardB.classList.add('flipped');
+    await sleep(650); if (myToken !== loopToken) return;
+
+    const aWins = a.rankIdx > b.rankIdx;
+    setCaption('Highest card wins the round.');
+    cardA.classList.add(aWins ? 'winner' : 'loser');
+    cardB.classList.add(aWins ? 'loser' : 'winner');
+    await sleep(850); if (myToken !== loopToken) return;
+
+    setCaption(aWins ? 'You win — both cards go to your pile.' : "Rival wins — both cards go to their pile.");
+    const winnerCard = aWins ? cardA : cardB;
+    const loserCard = aWins ? cardB : cardA;
+    winnerCard.style.transform = `translateY(${aWins ? '' : '-'}0px)`; // no-op, kept for clarity
+    loserCard.style.transform = `translateX(${aWins ? '-' : ''}70px) translateY(6px)`;
+    loserCard.style.opacity = '0';
+    winnerCard.style.transform += ' scale(1.06)';
+    await sleep(650); if (myToken !== loopToken) return;
+
+    if (aWins) pileA.textContent = (parseInt(pileA.textContent) + 2);
+    else pileB.textContent = (parseInt(pileB.textContent) + 2);
+
+    await sleep(500); if (myToken !== loopToken) return;
+    cardA.style.transform = ''; cardB.style.transform = '';
+    cardA.style.opacity = ''; cardB.style.opacity = '';
+  }
+
+  async function runLoop(myToken){
+    let round = 0;
+    while (playing && myToken === loopToken) {
+      round++;
+      await playRound(myToken);
+      if (myToken !== loopToken) return;
+      if (round >= 3) {
+        setCaption('...and so on, until one player has every card.');
+        await sleep(1800); if (myToken !== loopToken) return;
+        pileA.textContent = '0'; pileB.textContent = '0';
+        round = 0;
+        await sleep(300);
+      } else {
+        await sleep(400);
+      }
+    }
+  }
+
+  document.getElementById('playBtn').addEventListener('click', () => {
+    if (playing) return;
+    playing = true;
+    loopToken++;
+    runLoop(loopToken);
+  });
+  document.getElementById('pauseBtn').addEventListener('click', () => {
+    playing = false;
+    loopToken++;
+    setCaption('Paused. Tap play to continue.');
+  });
+</script>
+</body>
+</html>
